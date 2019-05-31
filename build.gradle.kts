@@ -15,7 +15,14 @@ repositories {
 	mavenCentral()
 }
 
+dependencyManagement {
+	imports {
+		mavenBom("io.projectreactor:reactor-bom:Bismuth-RELEASE")
+	}
+}
+
 dependencies {
+	implementation("io.projectreactor:reactor-core")
 	implementation("com.github.shyiko:mysql-binlog-connector-java:0.18.1")
 	implementation("org.springframework.boot:spring-boot-starter")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
