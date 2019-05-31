@@ -16,6 +16,7 @@ repositories {
 }
 
 dependencies {
+	implementation("com.github.shyiko:mysql-binlog-connector-java:0.18.1")
 	implementation("org.springframework.boot:spring-boot-starter")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
