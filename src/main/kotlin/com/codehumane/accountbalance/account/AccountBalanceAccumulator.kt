@@ -42,24 +42,20 @@ class AccountBalanceAccumulator(
 
     private fun accumulateBalanceByPastTransfers() {
         transferRepository.findAll().forEach {
-            accountRepository.findByAccountNumber(it.accountNumber)?.apply {
-                this.balance += it.amount
-            }
+            accumulateTransferAmount(it)
         }
     }
 
     private fun subscribeTransferWrite() {
         writeEventsSource
-            .filter { "transfer" == it.table.table }
+            .filter { filterTable(it) }
             .map { mapToTransfer(it) }
+            .doOnError { terminateOnUnrecoverableError(it) }
             .subscribe { accumulateTransferAmount(it) }
     }
 
-    private fun accumulateTransferAmount(transfer: Transfer) {
-        accountRepository.findByAccountNumber(transfer.accountNumber)?.apply {
-            this.balance += transfer.amount
-        }
-    }
+    private fun filterTable(it: WriteRowEvent) =
+        Transfer::class.simpleName!!.toLowerCase() == it.table.table
 
     private fun mapToTransfer(event: WriteRowEvent): Transfer {
         return columnValuesConverter.convert(event).let {
@@ -71,6 +67,19 @@ class AccountBalanceAccumulator(
                 it["amount"]!!.toLong()
             )
         }
+    }
+
+    private fun accumulateTransferAmount(transfer: Transfer) {
+        val account = accountRepository.findByAccountNumber(transfer.accountNumber)
+
+        account?.apply {
+            this.balance += transfer.amount
+        }
+    }
+
+    private fun terminateOnUnrecoverableError(it: Throwable?) {
+        log.error("unrecoverable error. system exit", it)
+        System.exit(666)
     }
 
 }
