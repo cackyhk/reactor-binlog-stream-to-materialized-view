@@ -6,7 +6,7 @@ Content-Type: application/json
 
 {
   "accountNumber": "123",
-  "amount": 100
+  "amount": -30
 }
 
-
+###

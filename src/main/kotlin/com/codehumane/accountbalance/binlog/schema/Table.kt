@@ -5,5 +5,5 @@ data class Table(
     val table: String,
     val tableId: Long,
     val primaryKeys: List<String>,
-    val columns: Map<String, Column>
+    val columns: LinkedHashMap<String, Column>
 )

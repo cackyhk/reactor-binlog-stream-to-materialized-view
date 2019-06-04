@@ -104,7 +104,7 @@ class BinaryLogReceiver(
             }
         }
 
-        private fun generateColumnInfo(data: TableMapEventData): Map<String, Column> {
+        private fun generateColumnInfo(data: TableMapEventData): LinkedHashMap<String, Column> {
             val query = """
                 select
                   ordinal_position,
@@ -125,7 +125,7 @@ class BinaryLogReceiver(
                 )
             }
 
-            return columns.associateBy({ it.column }, { it })
+            return columns.associateTo(LinkedHashMap(), { it.column to it })
         }
     }
 
@@ -150,6 +150,8 @@ class BinaryLogReceiver(
 
             table?.also { t ->
                 data.rows.forEach { r ->
+
+                    table.columns
                     onWriteRowsEventReceive(WriteRowEvent(t, r))
                 }
             }
