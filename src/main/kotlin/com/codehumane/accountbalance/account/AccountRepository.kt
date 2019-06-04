@@ -1,11 +1,9 @@
 package com.codehumane.accountbalance.account
 
-import com.codehumane.accountbalance.transfer.TransferRepository
 import org.springframework.stereotype.Repository
-import javax.annotation.PostConstruct
 
 @Repository
-class AccountRepository(private val transferRepository: TransferRepository) {
+class AccountRepository {
 
     private val accounts: Set<Account> = setOf(
         Account("123", 0),
@@ -21,18 +19,12 @@ class AccountRepository(private val transferRepository: TransferRepository) {
         accountNumberToAccount = accounts.associateBy({ it.accountNumber }, { it })
     }
 
-    @PostConstruct
-    fun sumByPastTransfers() {
-        transferRepository.findAll().forEach {
-            val transferAmount = it.amount
-            findByAccountNumber(it.accountNumber)?.apply {
-                this.balance += transferAmount
-            }
-        }
-    }
-
     fun findByAccountNumber(accountNumber: String): Account? {
         return accountNumberToAccount[accountNumber]
+    }
+
+    fun findAll(): Set<Account> {
+        return accounts
     }
 
 }
