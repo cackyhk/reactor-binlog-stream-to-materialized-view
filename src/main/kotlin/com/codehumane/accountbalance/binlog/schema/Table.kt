@@ -1,4 +1,4 @@
-package com.codehumane.accountbalance.schema
+package com.codehumane.accountbalance.binlog.schema
 
 data class Table(
     val database: String,

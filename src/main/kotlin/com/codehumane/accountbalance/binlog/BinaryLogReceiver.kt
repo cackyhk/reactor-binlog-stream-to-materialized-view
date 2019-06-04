@@ -1,8 +1,8 @@
 package com.codehumane.accountbalance.binlog
 
-import com.codehumane.accountbalance.schema.Column
-import com.codehumane.accountbalance.schema.SchemaInfoContainer
-import com.codehumane.accountbalance.schema.Table
+import com.codehumane.accountbalance.binlog.schema.Column
+import com.codehumane.accountbalance.binlog.schema.Table
+import com.codehumane.accountbalance.binlog.schema.TableContainer
 import com.github.shyiko.mysql.binlog.BinaryLogClient
 import com.github.shyiko.mysql.binlog.event.*
 import com.github.shyiko.mysql.binlog.event.deserialization.EventDeserializer
@@ -16,15 +16,15 @@ import java.util.concurrent.CompletableFuture
 class BinaryLogReceiver(
     jdbcTemplate: JdbcTemplate,
     hikariDataSource: HikariDataSource,
-    schemaInfoContainer: SchemaInfoContainer,
+    tableContainer: TableContainer,
     onWriteRowsEventReceive: (WriteRowEvent) -> Unit
 ) {
 
     private val log = LoggerFactory.getLogger(BinaryLogReceiver::class.java)
     private val binaryLogClient: BinaryLogClient
     private val binaryLogReceivers: Set<BinaryLogEventReceiver> = setOf(
-        TableMapBinaryLogEventReceiver(jdbcTemplate, schemaInfoContainer),
-        WriteRowsBinaryLogEventReceiver(onWriteRowsEventReceive, schemaInfoContainer)
+        TableMapBinaryLogEventReceiver(jdbcTemplate, tableContainer),
+        WriteRowsBinaryLogEventReceiver(onWriteRowsEventReceive, tableContainer)
     )
 
     init {
@@ -69,7 +69,7 @@ class BinaryLogReceiver(
 
     private class TableMapBinaryLogEventReceiver(
         private val jdbcTemplate: JdbcTemplate,
-        private val schemaInfoContainer: SchemaInfoContainer
+        private val tableContainer: TableContainer
     ) : BinaryLogEventReceiver {
 
         override fun isReceivable(eventType: EventType): Boolean {
@@ -78,7 +78,7 @@ class BinaryLogReceiver(
 
         override fun receive(event: Event) {
             val data = event.getData<TableMapEventData>()
-            schemaInfoContainer.computeIfAbsent(data.tableId) {
+            tableContainer.computeIfAbsent(data.tableId) {
                 Table(
                     data.database,
                     data.table,
@@ -131,7 +131,7 @@ class BinaryLogReceiver(
 
     private class WriteRowsBinaryLogEventReceiver(
         private val onWriteRowsEventReceive: (WriteRowEvent) -> Unit,
-        private val schemaInfoContainer: SchemaInfoContainer
+        private val tableContainer: TableContainer
     ) : BinaryLogEventReceiver {
 
         private val targetEventTypes = setOf(
@@ -146,7 +146,7 @@ class BinaryLogReceiver(
 
         override fun receive(event: Event) {
             val data = event.getData<WriteRowsEventData>()
-            val table = schemaInfoContainer.get(data.tableId)
+            val table = tableContainer.get(data.tableId)
 
             table?.also { t ->
                 data.rows.forEach { r ->

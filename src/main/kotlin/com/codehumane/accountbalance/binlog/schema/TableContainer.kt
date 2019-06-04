@@ -1,9 +1,9 @@
-package com.codehumane.accountbalance.schema
+package com.codehumane.accountbalance.binlog.schema
 
 import org.springframework.stereotype.Component
 
 @Component
-class SchemaInfoContainer {
+class TableContainer {
 
     private val tables: MutableMap<Long, Table> = mutableMapOf() // tableId to table
 

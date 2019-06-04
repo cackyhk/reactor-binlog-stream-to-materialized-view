@@ -2,7 +2,7 @@ package com.codehumane.accountbalance
 
 import com.codehumane.accountbalance.binlog.BinaryLogReceiver
 import com.codehumane.accountbalance.binlog.WriteRowEvent
-import com.codehumane.accountbalance.schema.SchemaInfoContainer
+import com.codehumane.accountbalance.binlog.schema.TableContainer
 import com.zaxxer.hikari.HikariDataSource
 import org.slf4j.LoggerFactory
 import org.springframework.jdbc.core.JdbcTemplate
@@ -14,12 +14,12 @@ import javax.annotation.PostConstruct
 class AccountBalanceService(
     jdbcTemplate: JdbcTemplate,
     hikariDataSource: HikariDataSource,
-    schemaInfoContainer: SchemaInfoContainer
+    tableContainer: TableContainer
 ) {
 
     private val log = LoggerFactory.getLogger(AccountBalanceService::class.java)
     private val writeEvents = Flux.create<WriteRowEvent> { sink ->
-        val binaryLogReceiver = BinaryLogReceiver(jdbcTemplate, hikariDataSource, schemaInfoContainer) {
+        val binaryLogReceiver = BinaryLogReceiver(jdbcTemplate, hikariDataSource, tableContainer) {
             log.info("WriteRowEvent next: {}", it)
             sink.next(it)
         }
