@@ -6,7 +6,18 @@ Content-Type: application/json
 
 {
   "accountNumber": "123",
-  "amount": -30
+  "amount": 100
 }
 
+
+
+
+### 대량 이체 이력 쌓기
+
+POST http://localhost:8080/account/transfer/bulkcreate
+Content-Type: application/json
+
+{}
+
 ###
+

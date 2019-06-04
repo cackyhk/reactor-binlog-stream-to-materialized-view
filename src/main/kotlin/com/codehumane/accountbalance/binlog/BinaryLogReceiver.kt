@@ -39,6 +39,7 @@ class BinaryLogReceiver(
         }
 
         binaryLogClient.apply {
+            registerLifecycleListener(DefaultLifecycleListener())
             setEventDeserializer(EventDeserializer().apply {
                 setCompatibilityMode(CHAR_AND_BINARY_AS_BYTE_ARRAY)
             })
@@ -57,7 +58,9 @@ class BinaryLogReceiver(
 
     fun start() {
         log.info("binary log client start connection")
-        CompletableFuture.runAsync { binaryLogClient.connect() }
+        CompletableFuture.runAsync {
+            binaryLogClient.connect()
+        }
     }
 
     interface BinaryLogEventReceiver {
@@ -159,4 +162,25 @@ class BinaryLogReceiver(
 
     }
 
+    internal class DefaultLifecycleListener : BinaryLogClient.LifecycleListener {
+
+        private val log = LoggerFactory.getLogger(DefaultLifecycleListener::class.java)
+
+        override fun onCommunicationFailure(client: BinaryLogClient?, ex: Exception?) {
+            log.error("communication failed", ex)
+        }
+
+        override fun onConnect(client: BinaryLogClient?) {
+            log.info("binary log client connected")
+        }
+
+        override fun onEventDeserializationFailure(client: BinaryLogClient?, ex: Exception?) {
+            log.error("event deserialization failed", ex)
+        }
+
+        override fun onDisconnect(client: BinaryLogClient?) {
+            log.info("binary log client disconnected")
+        }
+
+    }
 }

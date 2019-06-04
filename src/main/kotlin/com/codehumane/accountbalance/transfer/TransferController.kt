@@ -1,5 +1,6 @@
 package com.codehumane.accountbalance.transfer
 
+import com.codehumane.accountbalance.account.AccountRepository
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -8,7 +9,10 @@ import java.time.LocalDateTime
 
 @RestController
 @RequestMapping("/account/transfer")
-class TransferController(private val transferRepository: TransferRepository) {
+class TransferController(
+    private val transferRepository: TransferRepository,
+    private val accountRepository: AccountRepository
+) {
 
     @PostMapping
     fun create(@RequestBody command: TransferCommand) {
@@ -19,6 +23,20 @@ class TransferController(private val transferRepository: TransferRepository) {
                 amount = command.amount
             )
         )
+    }
+
+    /**
+     * 대량 추가를 테스트 하기 위한 엔드포인트
+     */
+    @PostMapping("/bulkcreate")
+    fun bulkCreate() {
+        accountRepository.findAll().forEach {
+            val accountNumber = it.accountNumber
+
+            repeat((0..100).count()) {
+                create(TransferCommand(accountNumber, Math.random().toLong() % 1000))
+            }
+        }
     }
 
     data class TransferCommand(
