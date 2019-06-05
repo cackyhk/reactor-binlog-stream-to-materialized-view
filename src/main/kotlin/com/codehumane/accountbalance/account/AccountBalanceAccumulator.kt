@@ -12,6 +12,7 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import reactor.core.publisher.TopicProcessor
 import java.time.Duration
 import java.time.LocalDateTime
 import javax.annotation.PostConstruct
@@ -54,14 +55,31 @@ class AccountBalanceAccumulator(
      * 전체 파이프 라인 구성 (쓰기 로그 수신 및 계좌 잔고 계산)
      */
     private fun subscribeTransferWrite() {
+        val topicProcessor = TopicProcessor.create<AccumulateTrace>()
+
+        /**
+         * binary log event 수신
+         */
         writeEventsSource
-            .filter { filterTable(it) }
-            .map { mapToTransfer(it) }
+            .filter { filterTable(it) } // 관심 있는 테이블 이벤트만 수신
+            .map { mapToTransfer(it) } // 이체 이력으로 변환
             .flatMapSequential { delayRandomly(it) } // 비동기로 처리하되 순서를 보장하기
             .log() // 로그 남기기 (편하다. 스레드 이름을 통해 병렬로 실행은 되는지, 순서 보장은 되고 있는지 확인 가능)
-            .map { accumulateTransferAmount(it) }
-            .doOnError { terminateOnUnrecoverableError(it) }
-            .subscribe()
+            .map { AccumulateTrace(it, accumulateTransferAmount(it)) } // 이체 이력으로 계좌 잔고 계산
+            .doOnError { terminateOnUnrecoverableError(it) } // 에러 처리
+            .subscribe(topicProcessor) // 토픽에 이벤트 전달
+
+        /**
+         * 수신된 이벤트를 10개의 스레드가 병렬로 나누어 처리하기.
+         * 단, 각 스레드 별로 들어온 이벤트는 차례대로 처리
+         */
+        (0..9).forEach { idx ->
+            Flux.from(topicProcessor) // 토픽 이벤트 수신
+                .filter { it.account.accountNumber.startsWith(idx.toString()) } // 병렬 구성
+                .delayElements(Duration.ofSeconds((Math.random() * 10).toLong())) // 순서 보장이 잘 되는지 확인하기 위해 delay
+                .log() // 잘 되는지 로그로 확인
+                .subscribe() // 고고씽
+        }
     }
 
     /**
@@ -91,12 +109,12 @@ class AccountBalanceAccumulator(
      * 처리 시간이 중구 난방으로 달라지더라도,
      * 비동기 `flatMap`이 순서를 보장하는지 여부 확인을 위함.
      */
-    private fun delayRandomly(transfer: Transfer): Mono<Transfer> {
+    private fun <T> delayRandomly(value: T): Mono<T> {
         val delayInSeconds = (Math.random() * 10).toLong() % 4
 
         return Mono
             .delay(Duration.ofSeconds(delayInSeconds))
-            .map { transfer }
+            .map { value }
     }
 
     /**
@@ -119,4 +137,8 @@ class AccountBalanceAccumulator(
         System.exit(666)
     }
 
+    data class AccumulateTrace(
+        val transfer: Transfer,
+        val account: Account
+    )
 }

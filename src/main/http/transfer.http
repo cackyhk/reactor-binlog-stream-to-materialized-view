@@ -1,13 +1,26 @@
 
-### 이체 이력 쌓기
+### 이체 이력 쌓기 1
 
 POST http://localhost:8080/account/transfer
 Content-Type: application/json
 
 {
   "accountNumber": "123",
+  "amount": 7
+}
+
+
+
+### 이체 이력 쌓기 2
+
+POST http://localhost:8080/account/transfer
+Content-Type: application/json
+
+{
+  "accountNumber": "234",
   "amount": 100
 }
+
 
 
 

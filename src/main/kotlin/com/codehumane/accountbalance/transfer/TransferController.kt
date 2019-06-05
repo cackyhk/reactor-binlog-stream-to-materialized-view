@@ -30,11 +30,14 @@ class TransferController(
      */
     @PostMapping("/bulkcreate")
     fun bulkCreate() {
-        accountRepository.findAll().forEach { account ->
-            (0..100).forEach { idx ->
-                create(TransferCommand(account.accountNumber, idx.toLong()))
+        accountRepository
+            .findAll()
+//            .filter { it.accountNumber == "123" }
+            .forEach { account ->
+                (0..100).forEach { idx ->
+                    create(TransferCommand(account.accountNumber, idx.toLong()))
+                }
             }
-        }
     }
 
     data class TransferCommand(

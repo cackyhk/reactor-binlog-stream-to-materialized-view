@@ -33,7 +33,8 @@
 - [x] flux 파이프라인을 통해 WriteRowEvent를 전달하기
 - [x] flux 파이프라인을 통해 수신한 WriteRowEvent를 기반으로 계좌의 잔고 계산하기
 - [x] 생략하고 넘어갈 수 없는 에러가 발생한 경우에는 애플리케이션을 중단하기
-- [ ] 생략할 수 있는 에러가 발생한 경우에는 폴백 로직을 태우고 다음 처리를 계속하기
+- ~~[ ] 생략할 수 있는 에러가 발생한 경우에는 폴백 로직을 태우고 다음 처리를 계속하기~~
 - [x] 파이프라인의 중간에 무거운 연산을 넣고 이를 비동기로 처리하되 이벤트의 순서는 보장하기
+- [x] 하나의 스트림을 여러 스트림으로 분할하여 병렬로 처리하기 by ([TopicProcessor](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/TopicProcessor.html))
 - [ ] flux의 가용한 스레드 갯수를 제어하여 애플리케이션 전체 장애가 나지 않게 하기
 - [ ] flux의 스레드를 갯수를 제어하되, backpressure를 통해 이벤트 처리 속도를 제어하기
