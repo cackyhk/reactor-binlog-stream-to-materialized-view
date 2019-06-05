@@ -29,7 +29,6 @@ class AccountBalanceAccumulator(
     private val log = LoggerFactory.getLogger(AccountBalanceAccumulator::class.java)
     private val writeEventsSource = Flux.create<WriteRowEvent> { sink ->
         val binaryLogReceiver = BinaryLogReceiver(jdbcTemplate, hikariDataSource, tableContainer) {
-            log.info("WriteRowEvent next: {}", it)
             sink.next(it)
         }
 
@@ -58,7 +57,9 @@ class AccountBalanceAccumulator(
         writeEventsSource
             .filter { filterTable(it) }
             .map { mapToTransfer(it) }
-            .flatMap { transfer -> completeWithRandomDelay { accumulateTransferAmount(transfer) } }
+            .flatMapSequential { delayRandomly(it) } // 비동기로 처리하되 순서를 보장하기
+            .log() // 로그 남기기 (편하다. 스레드 이름을 통해 병렬로 실행은 되는지, 순서 보장은 되고 있는지 확인 가능)
+            .map { accumulateTransferAmount(it) }
             .doOnError { terminateOnUnrecoverableError(it) }
             .subscribe()
     }
@@ -85,18 +86,17 @@ class AccountBalanceAccumulator(
     }
 
     /**
-     * 0~5초의 지연을 임의로 발생시킨 뒤, 주어진 함수를 수행한다.
+     * 0~5초의 지연을 임의로 발생시킨 뒤 주어진 값을 Mono 형태로 반환한다.
      *
      * 처리 시간이 중구 난방으로 달라지더라도,
      * 비동기 `flatMap`이 순서를 보장하는지 여부 확인을 위함.
      */
-    private fun completeWithRandomDelay(func: () -> Account): Mono<Account> {
+    private fun delayRandomly(transfer: Transfer): Mono<Transfer> {
         val delayInSeconds = (Math.random() * 10).toLong() % 4
-        log.info("delayInSeconds: $delayInSeconds")
 
         return Mono
             .delay(Duration.ofSeconds(delayInSeconds))
-            .map { func() }
+            .map { transfer }
     }
 
     /**
