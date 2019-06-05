@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
+import reactor.core.publisher.FluxSink
 import reactor.core.publisher.Mono
 import reactor.core.publisher.TopicProcessor
 import java.time.Duration
@@ -28,13 +29,13 @@ class AccountBalanceAccumulator(
 ) {
 
     private val log = LoggerFactory.getLogger(AccountBalanceAccumulator::class.java)
-    private val writeEventsSource = Flux.create<WriteRowEvent> { sink ->
+    private val writeEventsSource = Flux.create<WriteRowEvent>({ sink ->
         val binaryLogReceiver = BinaryLogReceiver(jdbcTemplate, hikariDataSource, tableContainer) {
             sink.next(it)
         }
 
         binaryLogReceiver.start()
-    }
+    }, FluxSink.OverflowStrategy.ERROR)
 
     @PostConstruct
     fun initialize() {
@@ -63,7 +64,7 @@ class AccountBalanceAccumulator(
         writeEventsSource
             .filter { filterTable(it) } // 관심 있는 테이블 이벤트만 수신
             .map { mapToTransfer(it) } // 이체 이력으로 변환
-            .flatMapSequential { delayRandomly(it) } // 비동기로 처리하되 순서를 보장하기
+            .flatMapSequential<Transfer>({ delayRandomly(it) }, 256, 32) // 비동기로 처리하되 순서를 보장하기
             .log() // 로그 남기기 (편하다. 스레드 이름을 통해 병렬로 실행은 되는지, 순서 보장은 되고 있는지 확인 가능)
             .map { AccumulateTrace(it, accumulateTransferAmount(it)) } // 이체 이력으로 계좌 잔고 계산
             .doOnError { terminateOnUnrecoverableError(it) } // 에러 처리
@@ -76,7 +77,7 @@ class AccountBalanceAccumulator(
         (0..9).forEach { idx ->
             Flux.from(topicProcessor) // 토픽 이벤트 수신
                 .filter { it.account.accountNumber.startsWith(idx.toString()) } // 병렬 구성
-                .delayElements(Duration.ofSeconds((Math.random() * 10).toLong())) // 순서 보장이 잘 되는지 확인하기 위해 delay
+                .delayElements(Duration.ofMillis((Math.random() * 100).toLong())) // 순서 보장이 잘 되는지 확인하기 위해 delay (최대 3자릿수 mills delay)
                 .log() // 잘 되는지 로그로 확인
                 .subscribe() // 고고씽
         }
@@ -110,10 +111,10 @@ class AccountBalanceAccumulator(
      * 비동기 `flatMap`이 순서를 보장하는지 여부 확인을 위함.
      */
     private fun <T> delayRandomly(value: T): Mono<T> {
-        val delayInSeconds = (Math.random() * 10).toLong() % 4
+        val delayInMilliseconds = (Math.random() * 100).toLong() // 100ms까지 지연을 허용한다고 가정
 
         return Mono
-            .delay(Duration.ofSeconds(delayInSeconds))
+            .delay(Duration.ofMillis(delayInMilliseconds))
             .map { value }
     }
 

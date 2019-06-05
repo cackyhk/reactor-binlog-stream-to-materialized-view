@@ -1,6 +1,7 @@
 package com.codehumane.accountbalance.transfer
 
 import com.codehumane.accountbalance.account.AccountRepository
+import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -13,6 +14,8 @@ class TransferController(
     private val transferRepository: TransferRepository,
     private val accountRepository: AccountRepository
 ) {
+
+    private val log = LoggerFactory.getLogger(TransferController::class.java)
 
     @PostMapping
     fun create(@RequestBody command: TransferCommand) {
@@ -30,6 +33,7 @@ class TransferController(
      */
     @PostMapping("/bulkcreate")
     fun bulkCreate() {
+        log.info("bulk create started")
         accountRepository
             .findAll()
 //            .filter { it.accountNumber == "123" }
@@ -38,6 +42,8 @@ class TransferController(
                     create(TransferCommand(account.accountNumber, idx.toLong()))
                 }
             }
+
+        log.info("bulk create completed")
     }
 
     data class TransferCommand(
