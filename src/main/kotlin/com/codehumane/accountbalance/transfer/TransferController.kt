@@ -34,14 +34,12 @@ class TransferController(
     @PostMapping("/bulkcreate")
     fun bulkCreate() {
         log.info("bulk create started")
-        accountRepository
-            .findAll()
-//            .filter { it.accountNumber == "123" }
-            .forEach { account ->
-                (0..100).forEach { idx ->
-                    create(TransferCommand(account.accountNumber, idx.toLong()))
-                }
+        val accounts = accountRepository.findAll()
+        (1..400).forEach { idx ->
+            accounts.forEach { account ->
+                create(TransferCommand(account.accountNumber, idx.toLong()))
             }
+        }
 
         log.info("bulk create completed")
     }

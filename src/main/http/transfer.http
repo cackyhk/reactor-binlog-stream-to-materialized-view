@@ -5,7 +5,7 @@ POST http://localhost:8080/account/transfer
 Content-Type: application/json
 
 {
-  "accountNumber": "123",
+  "accountNumber": "1",
   "amount": 7
 }
 
@@ -17,7 +17,7 @@ POST http://localhost:8080/account/transfer
 Content-Type: application/json
 
 {
-  "accountNumber": "234",
+  "accountNumber": "2",
   "amount": 100
 }
 

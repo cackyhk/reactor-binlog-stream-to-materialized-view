@@ -64,8 +64,8 @@ class AccountBalanceAccumulator(
         writeEventsSource
             .filter { filterTable(it) } // 관심 있는 테이블 이벤트만 수신
             .map { mapToTransfer(it) } // 이체 이력으로 변환
-            .flatMapSequential<Transfer>({ delayRandomly(it) }, 256, 32) // 비동기로 처리하되 순서를 보장하기
-            .log() // 로그 남기기 (편하다. 스레드 이름을 통해 병렬로 실행은 되는지, 순서 보장은 되고 있는지 확인 가능)
+            .flatMapSequential<Transfer>({ delayRandomly(it) }, 512, 32) // 비동기로 처리하되 순서를 보장하기
+//            .log() // 로그 남기기 (편하다. 스레드 이름을 통해 병렬로 실행은 되는지, 순서 보장은 되고 있는지 확인 가능)
             .map { AccumulateTrace(it, accumulateTransferAmount(it)) } // 이체 이력으로 계좌 잔고 계산
             .doOnError { terminateOnUnrecoverableError(it) } // 에러 처리
             .subscribe(topicProcessor) // 토픽에 이벤트 전달
@@ -74,10 +74,11 @@ class AccountBalanceAccumulator(
          * 수신된 이벤트를 10개의 스레드가 병렬로 나누어 처리하기.
          * 단, 각 스레드 별로 들어온 이벤트는 차례대로 처리
          */
-        (0..9).forEach { idx ->
+        (1..16).forEach { idx ->
             Flux.from(topicProcessor) // 토픽 이벤트 수신
-                .filter { it.account.accountNumber.startsWith(idx.toString()) } // 병렬 구성
-                .delayElements(Duration.ofMillis((Math.random() * 100).toLong())) // 순서 보장이 잘 되는지 확인하기 위해 delay (최대 3자릿수 mills delay)
+                .filter { it.account.accountNumber == idx.toString() } // 병렬 구성
+                .delayElements(Duration.ofMillis((Math.random() * 10).toLong())) // 순서 보장이 잘 되는지 확인하기 위해 delay
+                .map { it.transfer }
                 .log() // 잘 되는지 로그로 확인
                 .subscribe() // 고고씽
         }
@@ -111,7 +112,7 @@ class AccountBalanceAccumulator(
      * 비동기 `flatMap`이 순서를 보장하는지 여부 확인을 위함.
      */
     private fun <T> delayRandomly(value: T): Mono<T> {
-        val delayInMilliseconds = (Math.random() * 100).toLong() // 100ms까지 지연을 허용한다고 가정
+        val delayInMilliseconds = (Math.random() * 10).toLong() // 100ms까지 지연을 허용한다고 가정
 
         return Mono
             .delay(Duration.ofMillis(delayInMilliseconds))
@@ -126,7 +127,7 @@ class AccountBalanceAccumulator(
 
         return checkNotNull(account).apply {
             this.balance += transfer.amount
-            log.info("account balance accumulated: $account")
+//            log.info("account balance accumulated: $account")
         }
     }
 
