@@ -25,6 +25,7 @@
 - 그 중에서도 [Docker Official Images](https://hub.docker.com/_/mysql)를 사용.
 - 컨테이너 실행은 `docker run --name mysql -e MYSQL_ROOT_PASSWORD=test -p 3306:3306 -d mysql:latest`
 - 그리고 mysql_native_password 설정. `alter user 'root'@'localhost' identified with mysql_native_password by 'test'`
+- 그 외 권한 등의 준비 작업은 [mysql-binlog-connector-java README](https://github.com/shyiko/mysql-binlog-connector-java/blob/master/README.md) 참고.
 
 ## 기술적으로 확인해 보고 싶은 것
 
