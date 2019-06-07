@@ -37,4 +37,4 @@
 - [x] 파이프라인의 중간에 무거운 연산을 넣고 이를 비동기로 처리하되 이벤트의 순서는 보장하기
 - [x] 하나의 스트림을 여러 스트림으로 분할하여 병렬로 처리하기 by ([TopicProcessor](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/TopicProcessor.html))
 - [x] flux의 가용한 스레드 갯수를 제어하여 애플리케이션 전체 장애가 나지 않게 하기
-- [ ] flux overflow 에러가 나지 않도록 처리량을 적절히 제어하기
+- [x] flux overflow 에러가 나지 않도록 처리량을 적절히 제어하기

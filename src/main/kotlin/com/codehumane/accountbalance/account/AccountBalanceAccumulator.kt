@@ -28,9 +28,15 @@ class AccountBalanceAccumulator(
     private val columnValuesConverter: ColumnValuesConverter
 ) {
 
+    private val counter = ApproximateThroughputCounter()
     private val log = LoggerFactory.getLogger(AccountBalanceAccumulator::class.java)
     private val writeEventsSource = Flux.create<WriteRowEvent>({ sink ->
         val binaryLogReceiver = BinaryLogReceiver(jdbcTemplate, hikariDataSource, tableContainer) {
+            log.info("throughput: $counter")
+            while (counter.get() > 10) {
+                log.info("sleeping - throughput overhead")
+                Thread.sleep(10)
+            }
             sink.next(it)
         }
 
@@ -63,6 +69,7 @@ class AccountBalanceAccumulator(
          */
         writeEventsSource
             .filter { filterTable(it) } // 관심 있는 테이블 이벤트만 수신
+            .doOnNext { counter.inc() }
             .map { mapToTransfer(it) } // 이체 이력으로 변환
             .flatMapSequential<Transfer>({ delayRandomly(it) }, 512, 32) // 비동기로 처리하되 순서를 보장하기
 //            .log() // 로그 남기기 (편하다. 스레드 이름을 통해 병렬로 실행은 되는지, 순서 보장은 되고 있는지 확인 가능)
@@ -77,9 +84,10 @@ class AccountBalanceAccumulator(
         (1..16).forEach { idx ->
             Flux.from(topicProcessor) // 토픽 이벤트 수신
                 .filter { it.account.accountNumber == idx.toString() } // 병렬 구성
-                .delayElements(Duration.ofMillis((Math.random() * 10).toLong())) // 순서 보장이 잘 되는지 확인하기 위해 delay
+                .delayElements(Duration.ofMillis((Math.random() * 10_000).toLong())) // 순서 보장이 잘 되는지 확인하기 위해 delay
                 .map { it.transfer }
                 .log() // 잘 되는지 로그로 확인
+                .doOnNext { counter.dec() }
                 .subscribe() // 고고씽
         }
     }
@@ -143,4 +151,25 @@ class AccountBalanceAccumulator(
         val transfer: Transfer,
         val account: Account
     )
+
+    /**
+     * 현재 몇 개의 아이템이 처리 중 또는 버퍼에 들어 있는지를 대략적(성능상의 이유로)으로 계산
+     */
+    data class ApproximateThroughputCounter(
+        var inProgress: Int = 0
+    ) {
+
+        fun inc() {
+            inProgress += 1
+        }
+
+        fun dec() {
+            inProgress -= 1
+        }
+
+        fun get(): Int {
+            return inProgress
+        }
+
+    }
 }
